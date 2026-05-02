@@ -1,0 +1,1369 @@
+<!DOCTYPE0 html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>US Green Energy Tracker - Team 046</title>
+<style>
+  :root {
+    --bg: #f1f5f9;
+    --panel: #ffffff;
+    --panel2: #f8fafc;
+    --border: #e2e8f0;
+    --accent: #2563eb;
+    --accent2: #10b981;
+    --text: #1e293b;
+    --text-muted: #64748b;
+    --red: #e05000;
+    --forecast-stripe: rgba(251,191,36,0.07);
+    --forecast-accent: #f59e0b;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 13px; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+  #header { display: flex; align-items: center; gap: 14px; padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  #header h2 { font-size: 14px; font-weight: 600; letter-spacing: 0.03em; color: var(--text); }
+  #header .tag { background: var(--accent); color: white; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 3px; letter-spacing: 0.05em; }
+  #header .forecast-badge { background: var(--forecast-accent); color: white; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 3px; letter-spacing: 0.05em; margin-left: auto; }
+
+  #main { display: flex; flex: 1; overflow: hidden; gap: 0; }
+
+  #left-panel { flex: 0 0 auto; display: flex; flex-direction: column; padding: 8px; gap: 6px; background: var(--panel); border-right: 1px solid var(--border); }
+
+  #controls-row { display: flex; align-items: center; gap: 8px; }
+  #controls-row label { color: var(--text-muted); font-size: 12px; font-weight: 600; }
+  select { background: var(--panel2); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 3px 6px; font-size: 12px; cursor: pointer; }
+  svg .tick text, svg g.axis text { font-size: 10px; }
+  select:focus { outline: 1px solid var(--accent); }
+
+  #year_display { text-align: center; font-size: 21px; font-weight: 700; letter-spacing: 0.05em; line-height: 1; margin-top: 30px; }
+  #year_display.forecast-year { color: var(--forecast-accent); }
+  #year_display.historical-year { color: var(--accent); }
+  #forecast-label { text-align: center; font-size: 9px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--forecast-accent); opacity: 0; transition: opacity 0.2s; margin-top: -2px; }
+  #forecast-label.visible { opacity: 1; }
+
+  #map-wrap { position: relative; padding-bottom: 90px; }
+
+  #cluster_toggle_row { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-left: auto; }
+  #cluster_toggle_row input { cursor: pointer; accent-color: var(--accent); }
+  #cluster_k_display { font-weight: 700; color: var(--accent); }
+  #cluster_legend { display: none; position: absolute; left: 50%; transform: translateX(-50%); bottom: 0; padding: 4px 6px; background: var(--panel2); border: 1px solid var(--border); border-radius: 3px; font-size: 10px; line-height: 1.3; max-width: 200px; }
+  #cluster_legend .cl-row { display: flex; align-items: center; gap: 4px; margin-bottom: 1px; }
+  #cluster_legend .cl-swatch { width: 14px; height: 4px; border-radius: 1px; flex-shrink: 0; }
+
+  #slider_row { display: flex; align-items: center; gap: 8px; margin-top: 18px; }
+  #play_btn { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: white; border: none; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  #play_btn:hover { background: #1d4ed8; }
+  #yr_slider { flex: 1; accent-color: var(--accent); }
+
+  
+  #slider_track_wrap { flex: 1; position: relative; }
+  #slider_track_wrap #yr_slider { width: 100%; display: block; }
+  #tick_labels { position: relative; height: 14px; font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+  #tick_labels span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+  #tick_labels span:first-child { transform: translateX(0); }
+  #tick_labels span:last-child { transform: translateX(-100%); }
+  #tick_labels .forecast-tick { color: var(--forecast-accent); font-weight: 600; }
+
+  #national_box { background: var(--panel2); border: 1px solid var(--border); border-radius: 5px; padding: 6px 8px; margin-top: 18px; }
+  #national_box h3 { font-size: 11px; color: var(--text-muted); margin-bottom: 14px; font-weight: 500; }
+
+  #state-selector-bar {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 6px 10px; background: var(--panel); border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  #state-selector-label { font-size: 12px; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+  #global-pills { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; flex: 1; }
+
+  #right-panel { flex: 1; display: flex; flex-direction: column; gap: 0; overflow: hidden; }
+
+  .chart-panel { flex: 1; display: flex; flex-direction: column; border-bottom: 1px solid var(--border); padding: 6px 10px 4px; min-height: 0; }
+  .chart-panel:last-child { border-bottom: none; }
+
+  .chart-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; flex-shrink: 0; }
+  .chart-label { font-size: 16px; font-weight: 600; color: var(--accent); letter-spacing: 0.06em; flex-shrink: 0; }
+  .chart-header select { font-size: 12px; }
+  .state-pills { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; flex: 1; }
+  .state-pill { display: flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 600; padding: 2px 6px; border-radius: 12px; cursor: pointer; user-select: none; transition: opacity 0.15s; border: 1.5px solid transparent; }
+  .state-pill:hover { opacity: 0.8; }
+  .state-pill .pill-x { opacity: 0.6; font-size: 12px; }
+  .add-state-btn { background: var(--panel2); border: 1px dashed var(--border); color: var(--text-muted); border-radius: 12px; font-size: 12px; padding: 2px 8px; cursor: pointer; white-space: nowrap; }
+  .add-state-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .chart-body { flex: 1; min-height: 0; position: relative; }
+  .chart-body svg { display: block; }
+
+  .state-dropdown { position: absolute; background: var(--panel2); border: 1px solid var(--border); border-radius: 6px; z-index: 200; padding: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); max-height: 220px; overflow-y: auto; min-width: 160px; }
+  .state-dropdown input[type=text] { width: 100%; background: var(--panel); border: 1px solid var(--border); color: var(--text); border-radius: 4px; padding: 4px 6px; font-size: 12px; margin-bottom: 5px; }
+  .state-dropdown .bulk-row { display: flex; gap: 8px; padding: 2px 4px 6px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+  .state-dropdown .bulk-link { color: var(--accent); font-size: 11px; cursor: pointer; user-select: none; }
+  .state-dropdown .bulk-link:hover { text-decoration: underline; }
+  .state-dropdown input[type=text]:focus { outline: 1px solid var(--accent); }
+  .state-opt { padding: 3px 6px; border-radius: 3px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 5px; }
+  .state-opt:hover { background: var(--border); }
+  .state-opt.selected { color: var(--accent); }
+  .state-opt .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  #notes_box { background: var(--panel2); border: 1px solid var(--border); border-radius: 5px; padding: 6px 8px; flex: 1; display: flex; flex-direction: column; min-height: 0; margin-top: 18px; }
+  #notes_box h3 { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; font-weight: 500; flex-shrink: 0; }
+  #notes_text { flex: 1; width: 100%; background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 5px 7px; font-size: 13px; line-height: 1.5; min-height: 0; overflow-y: auto; }
+
+  #tooltip { position: fixed; background: rgba(255,255,255,0.97); color: var(--text); box-shadow: 0 2px 12px rgba(0,0,0,0.12); padding: 6px 10px; border-radius: 5px; font-size: 11px; display: none; pointer-events: none; z-index: 999; border: 1px solid var(--border); line-height: 1.6; }
+  #tooltip .forecast-note { color: var(--forecast-accent); font-size: 10px; font-style: italic; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <span class="tag">TEAM 046</span>
+  <h2>US Green Energy Transition Tracker</h2>
+  <span class="forecast-badge">FORECAST 2025–2030</span>
+</div>
+
+<div id="main">
+  <div id="left-panel">
+    <div id="controls-row">
+      <label for="metric_picker">Map metric:</label>
+      <select id="metric_picker"></select>
+      <div id="cluster_toggle_row">
+        <input type="checkbox" id="cluster_chk" checked>
+        <label for="cluster_chk">Show state clusters (k-means elbow)</label>
+        <span id="cluster_k_display"></span>
+      </div>
+    </div>
+
+    <div id="year_display" class="historical-year">2010</div>
+    <div id="forecast-label">FORECAST — 5-YEAR TREND WITH 50% DAMPENING</div>
+
+    <div id="map-wrap">
+      <svg id="map_svg" width="680" height="390"></svg>
+      <div id="cluster_legend"></div>
+    </div>
+
+    <div id="slider_row">
+      <button id="play_btn">▶</button>
+      <div id="slider_track_wrap">
+        <input type="range" id="yr_slider" min="2010" max="2030" value="2010">
+        <div id="tick_labels">
+          <span style="left:0%">2010</span>
+          <span style="left:10%">2012</span>
+          <span style="left:20%">2014</span>
+          <span style="left:30%">2016</span>
+          <span style="left:40%">2018</span>
+          <span style="left:50%">2020</span>
+          <span style="left:60%">2022</span>
+          <span style="left:70%">2024</span>
+          <span class="forecast-tick" style="left:80%">2026</span>
+          <span class="forecast-tick" style="left:90%">2028</span>
+          <span class="forecast-tick" style="left:100%">2030</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="national_box">
+      <h3 id="national_title">National Total — Capacity (MW)</h3>
+      <svg id="national_svg" width="668" height="180"></svg>
+    </div>
+
+    <div id="notes_box">
+      <h3>Notes</h3>
+      <div id="notes_text">The analysis is based on data from:<br>
+        * US Energy Information Administration forms 860 (https://www.eia.gov/electricity/data/eia860)<br>
+        * US Energy Information Administration forms 923 (https://www.eia.gov/electricity/data/eia923)<br>
+        * US EPA forms eGRID (https://www.epa.gov/egrid/historical-egrid-data)<br>
+        * Data explorers: EPA (https://www.epa.gov/egrid/data-explorer) - EIA (https://www.eia.gov/electricity/data/browser)<br><br>
+        Clustering is based on the metric selected.<br>
+        Forecasting is based on the past 5-year trend dampened at 50%, subject to 0 floors where relevant. </div>
+    </div>
+  </div>
+
+  <div id="right-panel">
+    <div id="state-selector-bar">
+      <span id="state-selector-label">Select states:</span>
+    <button id="global-add-btn" class="add-state-btn">+ Add state</button>
+    <div id="global-pills"></div>
+    </div>
+    <div class="chart-panel" id="chart-panel-0"></div>
+    <div class="chart-panel" id="chart-panel-1"></div>
+    <div class="chart-panel" id="chart-panel-2"></div>
+  </div>
+</div>
+
+<div id="tooltip"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+<script>
+
+const HIST_MIN = 2010, HIST_MAX = 2024, FORE_MAX = 2030;
+const CLUSTER_COLORS = ["#D1D124","#8C153E","#4daf4a","#984ea3","#377eb8","#a65628","#f781bf","#999999"];
+const CLUSTER_STROKE_W = 4.5;
+const LINE_COLORS = ["#3b82f6","#10b981","#f59e0b","#ef4444","#a78bfa"];
+
+const STATE_ABBREVS = [
+  "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA",
+  "KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ",
+  "NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT",
+  "VA","WA","WV","WI","WY"
+];
+
+const METRIC_CAPS = {
+  capacity_pct_yoy:       [-1.0,  3.0],   
+  capacity_util_rate:     [0,     1.0],   
+  net_elec_gen_gas_pct:   [0,     1.0],
+  net_elec_gen_coal_pct:  [0,     1.0],
+  net_elec_gen_oil_pct:   [0,     1.0],
+  net_elec_gen_nuclear_pct:[0,    1.0],
+  net_elec_gen_hydro_pct: [0,     1.0],
+  net_elec_gen_wind_pct:  [0,     1.0],
+  net_elec_gen_solar_pct: [0,     1.0],
+  net_elec_gen_biomass_pct:[0,    1.0],
+  
+  heat_rate_tot:          [0, Infinity],
+  emissions_rate:         [0, Infinity],
+  emissions_rate_co2:     [0, Infinity],
+  emissions_rate_nox:     [0, Infinity],
+  emissions_rate_so2:     [0, Infinity],
+  emissions_rate_ch4:     [0, Infinity],
+  emissions_rate_n20:     [0, Infinity],
+  
+  capacity:               [0, Infinity],
+  net_elec_gen:           [0, Infinity],
+  fuel_heat_tot:          [0, Infinity],
+  emis_co2:               [0, Infinity],
+  emis_co2e:              [0, Infinity],
+  emis_nox:               [0, Infinity],
+  emis_so2:               [0, Infinity],
+  emis_ch4:               [0, Infinity],
+  emis_n2o:               [0, Infinity],
+};
+
+function applyCap(key, value) {
+  const cap = METRIC_CAPS[key];
+  if (!cap || value === null || value === undefined || isNaN(value)) return value;
+  return Math.max(cap[0], Math.min(cap[1], value));
+}
+
+const PERCENT_METRICS = new Set([
+  "capacity_util_rate",
+  "capacity_pct_yoy", "net_elec_gen_pct_yoy", "fuel_heat_tot_pct_yoy", "emis_co2e_pct_yoy",
+  "net_elec_gen_gas_pct","net_elec_gen_coal_pct","net_elec_gen_oil_pct",
+  "net_elec_gen_nuclear_pct","net_elec_gen_hydro_pct","net_elec_gen_wind_pct",
+  "net_elec_gen_solar_pct","net_elec_gen_biomass_pct",
+  ]);
+const DISPLAY_SCALE = {
+    capacity: 1e-3,    
+    net_elec_gen: 1e-6, 
+  };
+  
+  
+  const FIXED_DECIMAL_METRICS = new Set(["capacity", "net_elec_gen"]);
+
+  
+  function plainSuffix(precision) {
+    return v => {
+      if (v == null || isNaN(v)) return "";
+      const sign = v < 0 ? "-" : "";
+      const abs = Math.abs(v);
+      let n, suf;
+      if (abs >= 1e12)      { n = abs / 1e12; suf = "tn"; }
+      else if (abs >= 1e9)  { n = abs / 1e9;  suf = "bn"; }
+      else if (abs >= 1e6)  { n = abs / 1e6;  suf = "m";  }
+      else if (abs >= 1e3)  { n = abs / 1e3;  suf = "k";  }
+      else                  { n = abs;        suf = "";   }
+      let p = precision;
+      if (n > 0 && n < 1) p = Math.max(p, Math.ceil(-Math.log10(n)) + (precision - 1));
+      return sign + Number(n.toFixed(p)).toString() + suf;
+    };
+  }
+
+  function fmtFor(metricKey, kind = "axis") {
+    let f;
+    if (PERCENT_METRICS.has(metricKey)) {
+      f = d3.format(".1%");
+    } else if (FIXED_DECIMAL_METRICS.has(metricKey)) {
+      f = kind === "legend" ? d3.format(",.1f") : d3.format(",.2~f");
+    } else {
+      if (kind === "tooltip") f = plainSuffix(2);
+      else                    f = plainSuffix(1);
+    }
+    const s = DISPLAY_SCALE[metricKey];
+    return s ? (v) => f(v * s) : f;
+  }
+
+const metricOptions = [
+  { value:"capacity",             label:"Capacity (GW)",              raw:true  },
+  { value:"net_elec_gen",         label:"Electricity generation (TWh, net)",       raw:true  },
+  { value:"fuel_heat_tot",        label:"Fuel consumption (MMBtu)",           raw:true  },
+  { value:"emis_co2",             label:"CO₂ (tons)",                 raw:true  },
+  { value:"emis_co2e",            label:"CO₂e (tons)",                raw:true  },
+  { value:"emis_nox",             label:"NOx (tons)",                 raw:true  },
+  { value:"emis_so2",             label:"SO₂ (tons)",                 raw:true  },
+  { value:"emis_ch4",             label:"CH₄ (lbs)",                  raw:true  },
+  { value:"emis_n2o",             label:"N₂O (lbs)",                  raw:true  },
+
+  { divider:true },
+  { value:"capacity_pct_yoy",     label:"Capacity growth YoY (%)",           raw:false },
+  { value:"net_elec_gen_pct_yoy", label:"Electricity generation growth YoY (%)",         raw:false },
+  { value:"fuel_heat_tot_pct_yoy",label:"Fuel consumption growth YoY (%)",          raw:false },
+  { value:"emis_co2e_pct_yoy",    label:"CO₂e emissions growth YoY (%)",              raw:false },
+
+  { divider:true },
+  { value:"capacity_util_rate",   label:"Capacity utilization (%)",   raw:false },
+  { value:"heat_rate_tot",        label:"Fuel consumption intensity (MMBtu/MWh)",      raw:false },
+  { value:"emissions_rate",       label:"CO₂e intensity (tons/MWh)",             raw:false },
+  { value:"emissions_rate_co2",   label:"CO₂ intensity (tons/MWh)",                   raw:false },
+  { value:"emissions_rate_nox",   label:"NOx intensity (tons/MWh)",                   raw:false },
+  { value:"emissions_rate_so2",   label:"SO₂ intensity (tons/MWh)",                   raw:false },
+  { value:"emissions_rate_ch4",   label:"CH₄ intensity (lbs/MWh)",                   raw:false },
+  { value:"emissions_rate_n20",   label:"N₂O intensity (tons/MWh)",                   raw:false },
+
+  { divider:true },
+  { value:"net_elec_gen_biomass_pct", label:"Biomass-generated electricity mix (% total)", raw:false },
+  { value:"net_elec_gen_coal_pct",    label:"Coal-generated electricity mix (% total)",    raw:false },
+  { value:"net_elec_gen_gas_pct",     label:"Gas-generated electricity mix (% total)",     raw:false },
+  { value:"net_elec_gen_hydro_pct",   label:"Hydro-generated electricity mix (% total)",   raw:false },
+  { value:"net_elec_gen_nuclear_pct", label:"Nuclear-generated electricity mix (% total)", raw:false },
+  { value:"net_elec_gen_oil_pct",     label:"Oil-generated electricity mix (% total)",     raw:false },
+  { value:"net_elec_gen_solar_pct",   label:"Solar-generated electricity mix (% total)",   raw:false },
+  { value:"net_elec_gen_wind_pct",    label:"Wind-generated electricity mix (% total)",    raw:false }
+];
+
+const fipsToState = {
+  "01":"AL","02":"AK","04":"AZ","05":"AR","06":"CA","08":"CO","09":"CT",
+  "10":"DE","12":"FL","13":"GA","15":"HI","16":"ID","17":"IL","18":"IN",
+  "19":"IA","20":"KS","21":"KY","22":"LA","23":"ME","24":"MD","25":"MA",
+  "26":"MI","27":"MN","28":"MS","29":"MO","30":"MT","31":"NE","32":"NV",
+  "33":"NH","34":"NJ","35":"NM","36":"NY","37":"NC","38":"ND","39":"OH",
+  "40":"OK","41":"OR","42":"PA","44":"RI","45":"SC","46":"SD","47":"TN",
+  "48":"TX","49":"UT","50":"VT","51":"VA","53":"WA","54":"WV","55":"WI","56":"WY"
+};
+
+const forecastCache = {};
+
+const BLUE_METRICS = [
+  "capacity_pct_yoy",
+  "capacity_util_rate",
+  "heat_rate_tot",
+  "emissions_rate", "emissions_rate_co2", "emissions_rate_nox", "emissions_rate_so2",
+  "emissions_rate_ch4", "emissions_rate_n20",
+  "net_elec_gen_gas_pct", "net_elec_gen_coal_pct", "net_elec_gen_oil_pct",
+  "net_elec_gen_nuclear_pct", "net_elec_gen_hydro_pct", "net_elec_gen_wind_pct",
+  "net_elec_gen_solar_pct", "net_elec_gen_biomass_pct",
+];
+const FUEL_TYPES = ["gas","coal","oil","nuclear","hydro","wind","solar","biomass"];
+const EMISSIONS_CHAIN = [
+  ["emis_co2",  "emissions_rate_co2"],
+  ["emis_co2e", "emissions_rate"],
+  ["emis_nox",  "emissions_rate_nox"],
+  ["emis_so2",  "emissions_rate_so2"],
+  ["emis_ch4",  "emissions_rate_ch4"],
+  ["emis_n2o",  "emissions_rate_n20"],
+];
+const YOY_DERIVED = {
+  net_elec_gen_pct_yoy:   "net_elec_gen",
+  fuel_heat_tot_pct_yoy:  "fuel_heat_tot",
+  emis_co2e_pct_yoy:      "emis_co2e",
+};
+
+const SKIP_ZERO_METRICS = new Set([
+  "heat_rate_tot",
+  "emissions_rate", "emissions_rate_co2", "emissions_rate_nox", "emissions_rate_so2",
+  "emissions_rate_ch4", "emissions_rate_n20",
+]);
+
+const BLUE_TRAIL_YEARS = 5;
+const TREND_DAMPING = 0.5;
+function fitBlueMetric(stateYear, st, mk) {
+  const skipZero = SKIP_ZERO_METRICS.has(mk);
+  const pts = [];
+  for (let yr = HIST_MAX; yr >= HIST_MIN && pts.length < BLUE_TRAIL_YEARS; yr--) {
+    const v = stateYear[st][yr]?.[mk];
+    if (v == null || isNaN(v)) continue;
+    if (skipZero && v === 0) continue;
+    pts.unshift({ yr, v });
+  }
+  const out = {};
+  if (pts.length === 0) return out;
+  const lastYr = pts[pts.length - 1].yr;
+  const lastVal = pts[pts.length - 1].v;
+  let slope = 0;
+  if (pts.length >= 2) {
+    const n = pts.length;
+    const xMean = pts.reduce((s, p) => s + p.yr, 0) / n;
+    const yMean = pts.reduce((s, p) => s + p.v, 0) / n;
+    const num = pts.reduce((s, p) => s + (p.yr - xMean) * (p.v - yMean), 0);
+    const den = pts.reduce((s, p) => s + (p.yr - xMean) ** 2, 0);
+    slope = den ? num / den : 0;
+  }
+  for (let yr = HIST_MAX + 1; yr <= FORE_MAX; yr++) {
+    out[yr] = applyCap(mk, lastVal + slope * (yr - lastYr) * TREND_DAMPING);
+  }
+  return out;
+}
+
+function buildForecasts(stateYear, _ignoredMetrics) {
+  for (const st in stateYear) {
+    const fc = forecastCache[st] = {};
+
+    
+    for (const mk of BLUE_METRICS) fc[mk] = fitBlueMetric(stateYear, st, mk);
+
+    
+    fc.capacity = {};
+    fc.net_elec_gen = {};
+    fc.fuel_heat_tot = {};
+    for (const t of FUEL_TYPES) fc["net_elec_gen_" + t] = {};
+    for (const [e] of EMISSIONS_CHAIN) fc[e] = {};
+
+    let prevCap = stateYear[st][HIST_MAX]?.capacity ?? null;
+
+    for (let yr = HIST_MAX + 1; yr <= FORE_MAX; yr++) {
+      const yoy  = fc.capacity_pct_yoy[yr];
+      const util = fc.capacity_util_rate[yr];
+      const hr   = fc.heat_rate_tot[yr];
+
+      const cap = (prevCap != null && yoy != null) ? applyCap("capacity", prevCap * (1 + yoy)) : null;
+      fc.capacity[yr] = cap;
+
+      const gen = (cap != null && util != null) ? applyCap("net_elec_gen", cap * util * 8760) : null;
+      fc.net_elec_gen[yr] = gen;
+
+      if (gen != null) for (const t of FUEL_TYPES) {
+        const pct = fc["net_elec_gen_" + t + "_pct"]?.[yr];
+        fc["net_elec_gen_" + t][yr] = (pct != null) ? Math.max(0, gen * pct) : null;
+      }
+
+      fc.fuel_heat_tot[yr] = (gen != null && hr != null) ? applyCap("fuel_heat_tot", gen * hr) : null;
+
+      for (const [eKey, rateKey] of EMISSIONS_CHAIN) {
+        const r = fc[rateKey]?.[yr];
+        fc[eKey][yr] = (gen != null && r != null) ? applyCap(eKey, gen * r) : null;
+      }
+
+      if (cap != null) prevCap = cap;
+    }
+
+    
+    for (const [yoyKey, baseKey] of Object.entries(YOY_DERIVED)) {
+      fc[yoyKey] = {};
+      for (let yr = HIST_MAX + 1; yr <= FORE_MAX; yr++) {
+        const cur  = fc[baseKey]?.[yr];
+        const prev = (yr === HIST_MAX + 1) ? stateYear[st][HIST_MAX]?.[baseKey] : fc[baseKey]?.[yr - 1];
+        fc[yoyKey][yr] = (cur != null && prev) ? safeDiv(cur - prev, prev) : null;
+      }
+    }
+  }
+}
+
+const nationalForecastCache = {};
+function buildNationalForecast(metricKey, isRaw) {
+  const out = nationalForecastCache[metricKey] = {};
+  for (let yr = HIST_MAX + 1; yr <= FORE_MAX; yr++) {
+    let total = 0, count = 0;
+    for (const st of STATE_ABBREVS) {
+      const v = forecastCache[st]?.[metricKey]?.[yr];
+      if (v != null && !isNaN(v)) { total += v; count++; }
+    }
+    out[yr] = isRaw ? total : (count ? total / count : null);
+  }
+}
+
+function kMeans(values, k, maxIter=100) {
+  const sorted = [...values].sort((a,b)=>a.value-b.value);
+  let centroids = d3.range(k).map(i => sorted[Math.floor(i*sorted.length/k)].value);
+  let assignments = new Array(values.length).fill(0);
+  for (let iter=0; iter<maxIter; iter++) {
+    let changed = false;
+    values.forEach((v,i)=>{
+      const nearest = d3.minIndex(centroids, c=>Math.abs(v.value-c));
+      if (nearest!==assignments[i]) { assignments[i]=nearest; changed=true; }
+    });
+    if (!changed) break;
+    centroids = centroids.map((_,ci)=>{
+      const grp = values.filter((_,i)=>assignments[i]===ci).map(d=>d.value);
+      return grp.length ? d3.mean(grp) : centroids[ci];
+    });
+  }
+  return { assignments, centroids };
+}
+
+function wcss(values, assignments, centroids) {
+  return values.reduce((s,v,i)=>s+(v.value-centroids[assignments[i]])**2, 0);
+}
+
+function autoK(values, maxK=7) {
+  if (values.length<=2) return 1;
+  const cap = Math.min(maxK, values.length);
+  const inertias = [];
+  for (let k=1; k<=cap; k++) {
+    const {assignments,centroids} = kMeans(values,k);
+    inertias.push(wcss(values,assignments,centroids));
+  }
+  if (inertias.length<3) return inertias.length;
+  let bestK=2, maxCurve=-Infinity;
+  for (let i=1; i<inertias.length-1; i++) {
+    const curve = inertias[i-1]-2*inertias[i]+inertias[i+1];
+    if (curve>maxCurve) { maxCurve=curve; bestK=i+1; }
+  }
+  return bestK;
+}
+
+function clusterStates(yearData, metric) {
+  const pts = [];
+  for (const st in yearData) {
+    const v = yearData[st]?.[metric];
+    if (v!==undefined && !isNaN(v)) pts.push({state:st, value:v});
+  }
+  if (pts.length<2) return null;
+  const k = autoK(pts);
+  const {assignments, centroids} = kMeans(pts,k);
+  const order = d3.range(k).sort((a,b)=>centroids[a]-centroids[b]);
+  const rankOf = {};
+  order.forEach((c,rank)=>{ rankOf[c]=rank; });
+  const stateCluster = {};
+  pts.forEach((p,i)=>{ stateCluster[p.state]=rankOf[assignments[i]]; });
+  const sortedCentroids = order.map(c=>centroids[c]);
+  return {stateCluster, k, centroids:sortedCentroids};
+}
+
+const mapSvg = d3.select("#map_svg");
+const statesLayer = mapSvg.append("g");
+const legendLayer = mapSvg.append("g");
+
+const projection = d3.geoAlbersUsa().scale(820).translate([340,200]);
+const pathGen = d3.geoPath().projection(projection);
+
+const slider = document.getElementById("yr_slider");
+const yearLabel = document.getElementById("year_display");
+const forecastLabel = document.getElementById("forecast-label");
+const tooltip = document.getElementById("tooltip");
+function positionTooltip(pageX, pageY) {
+  tooltip.style.left = "0px"; tooltip.style.top = "0px";
+  const w = tooltip.offsetWidth, h = tooltip.offsetHeight;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let left = pageX + 10;
+  if (left + w > vw - 8) left = pageX - w - 10;
+  let top = pageY - 30;
+  if (top + h > vh - 8) top = vh - h - 8;
+  if (top < 8) top = 8;
+  tooltip.style.left = left + "px";
+  tooltip.style.top = top + "px";
+}
+const metricPicker = document.getElementById("metric_picker");
+const clusterChk = document.getElementById("cluster_chk");
+const clusterKEl = document.getElementById("cluster_k_display");
+const clusterLegEl = document.getElementById("cluster_legend");
+
+let currentHoveredState = null;
+let currentHoveredPos = null;
+let currentClusterResult = null;
+
+function populateMetricOptions() {
+  metricPicker.innerHTML = "";
+  metricOptions.forEach(o=>{
+    const opt = document.createElement("option");
+    if (o.divider) {
+      opt.textContent = "──────────────";
+      opt.disabled = true;
+    } else {
+      opt.value=o.value; opt.textContent=o.label;
+    }
+    metricPicker.appendChild(opt);
+  });
+}
+
+let stateYear={}, dataByYear={}, nationalByYear={}, geoFeatures=[];
+
+function initMetrics() {
+  return {
+    capacity:0,net_elec_gen:0,fuel_heat_tot:0,
+    emis_co2:0,emis_co2e:0,emis_nox:0,emis_so2:0,emis_ch4:0,emis_n2o:0,emis_hg:0,
+    net_elec_gen_coal:0,net_elec_gen_oil:0,net_elec_gen_gas:0,net_elec_gen_nuclear:0,
+    net_elec_gen_hydro:0,net_elec_gen_biomass:0,net_elec_gen_wind:0,net_elec_gen_solar:0,
+    net_elec_gen_geothermal:0,net_elec_gen_otherfossil:0,net_elec_gen_otherother:0
+  };
+}
+
+function safeDiv(a,b){ return (!b||!a)?0:a/b; }
+
+function computeDerivedMetrics() {
+  for (const st in stateYear) {
+    for (let yr=HIST_MIN; yr<=HIST_MAX; yr++) {
+      const c=stateYear[st][yr]; if(!c) continue;
+      c.capacity_util_rate   = applyCap("capacity_util_rate", safeDiv(c.net_elec_gen,c.capacity * 8760));
+      c.heat_rate_tot        = safeDiv(c.fuel_heat_tot,c.net_elec_gen);
+      c.emissions_rate       = safeDiv(c.emis_co2e,c.net_elec_gen);
+      c.emissions_rate_nox   = safeDiv(c.emis_nox,c.net_elec_gen);
+      c.emissions_rate_so2   = safeDiv(c.emis_so2,c.net_elec_gen);
+      c.emissions_rate_co2   = safeDiv(c.emis_co2,c.net_elec_gen);
+      c.emissions_rate_ch4   = safeDiv(c.emis_ch4,c.net_elec_gen);
+      c.emissions_rate_n20   = safeDiv(c.emis_n2o,c.net_elec_gen);
+      c.emissions_rate_hg    = safeDiv(c.emis_hg,c.net_elec_gen);
+      c.net_elec_gen_gas_pct     = applyCap("net_elec_gen_gas_pct",     safeDiv(c.net_elec_gen_gas,c.net_elec_gen));
+      c.net_elec_gen_coal_pct    = applyCap("net_elec_gen_coal_pct",    safeDiv(c.net_elec_gen_coal,c.net_elec_gen));
+      c.net_elec_gen_oil_pct     = applyCap("net_elec_gen_oil_pct",     safeDiv(c.net_elec_gen_oil,c.net_elec_gen));
+      c.net_elec_gen_nuclear_pct = applyCap("net_elec_gen_nuclear_pct", safeDiv(c.net_elec_gen_nuclear,c.net_elec_gen));
+      c.net_elec_gen_hydro_pct   = applyCap("net_elec_gen_hydro_pct",   safeDiv(c.net_elec_gen_hydro,c.net_elec_gen));
+      c.net_elec_gen_wind_pct    = applyCap("net_elec_gen_wind_pct",    safeDiv(c.net_elec_gen_wind,c.net_elec_gen));
+      c.net_elec_gen_solar_pct   = applyCap("net_elec_gen_solar_pct",   safeDiv(c.net_elec_gen_solar,c.net_elec_gen));
+      c.net_elec_gen_biomass_pct = applyCap("net_elec_gen_biomass_pct", safeDiv(c.net_elec_gen_biomass,c.net_elec_gen));
+    }
+    for (let yr=HIST_MIN+1; yr<=HIST_MAX; yr++) {
+      const c=stateYear[st][yr],p=stateYear[st][yr-1]; if(!c||!p) continue;
+      c.capacity_pct_yoy      = applyCap("capacity_pct_yoy",      safeDiv(c.capacity-p.capacity,p.capacity));
+      c.net_elec_gen_pct_yoy  = safeDiv(c.net_elec_gen-p.net_elec_gen,p.net_elec_gen);
+      c.fuel_heat_tot_pct_yoy = safeDiv(c.fuel_heat_tot-p.fuel_heat_tot,p.fuel_heat_tot);
+      c.emis_co2e_pct_yoy     = safeDiv(c.emis_co2e-p.emis_co2e,p.emis_co2e);
+    }
+  }
+}
+
+function getVal(st, yr, metric) {
+  if (yr <= HIST_MAX) return dataByYear[yr]?.[st]?.[metric];
+  return forecastCache[st]?.[metric]?.[yr];
+}
+
+function applyClusterBorders(result) {
+  if (!result) { removeClusterBorders(); return; }
+  const {stateCluster,k,centroids} = result;
+  statesLayer.selectAll("path").each(function(d){
+    const ci = stateCluster[d.properties.abbrev];
+    d3.select(this)
+      .attr("stroke", ci!==undefined ? CLUSTER_COLORS[ci%CLUSTER_COLORS.length] : "#e2e8f0")
+      .attr("stroke-width", ci!==undefined ? CLUSTER_STROKE_W : 0.5);
+  });
+  clusterKEl.textContent = `${k} clusters`;
+  clusterLegEl.style.display = "block";
+  clusterLegEl.innerHTML = "<strong>Cluster key (low → high):</strong><br>" +
+    d3.range(k).map(i=>
+      `<div class="cl-row">
+        <div class="cl-swatch" style="background:${CLUSTER_COLORS[i]};"></div>
+        <span>Cluster ${i+1} — centroid: ${fmtFor(metricPicker.value,"tooltip")(centroids[i])}</span>
+      </div>`).join("");
+}
+
+function removeClusterBorders() {
+  statesLayer.selectAll("path").attr("stroke","#e2e8f0").attr("stroke-width",0.5);
+  clusterKEl.textContent="";
+  clusterLegEl.style.display="none";
+}
+
+function drawLegendQuantile(colorScale,values,metric) {
+  legendLayer.selectAll("*").remove();
+  mapSvg.select("defs").remove();
+  const x=630, y=235, h=145, w=12;
+  const metLabel = metricOptions.find(o=>o.value===metric)?.label || metric;
+  const unitMatch = metLabel.match(/\(([^)]+)\)/);
+  const unit = unitMatch ? unitMatch[1] : "";
+  if (unit) {
+    legendLayer.append("text")
+      .attr("x", x + w/2).attr("y", y - 16).attr("text-anchor","middle")
+      .style("font-size","10px").style("fill","#94a3b8").text(unit);
+  }
+  const thresholds=colorScale.quantiles(), colors=colorScale.range();
+  const defs=mapSvg.append("defs");
+  const grad=defs.append("linearGradient").attr("id","leg_grad")
+    .attr("x1","0%").attr("x2","0%").attr("y1","0%").attr("y2","100%");
+  colors.forEach((col,i)=>grad.append("stop")
+    .attr("offset",(i/(colors.length-1)*100)+"%").attr("stop-color",col));
+  legendLayer.append("rect").attr("x",x).attr("y",y).attr("width",w).attr("height",h)
+    .attr("fill","url(#leg_grad)").attr("stroke","#e2e8f0").attr("stroke-width",0.6).attr("rx",2);
+  const legScale=d3.scaleLinear().domain([0,colors.length-1]).range([0,h]);
+  const lg=legendLayer.append("g").attr("transform",`translate(${x+w+3},${y})`);
+  colors.forEach((_,i)=>{
+    const yp=legScale(i);
+    const val=i===0?d3.min(values):i===colors.length-1?d3.max(values):thresholds[i-1];
+    lg.append("text").attr("y",yp).attr("dy","0.32em").attr("x",3).style("font-size","10px").style("fill","#94a3b8").text(fmtFor(metric,"legend")(val));
+    lg.append("line").attr("y1",yp).attr("y2",yp).attr("x1",-2).attr("x2",0).attr("stroke","#cbd5e1").attr("stroke-width",0.5);
+  });
+}
+
+function drawStates(yr, metric) {
+  const isForecast = yr > HIST_MAX;
+  const yearData = {};
+  if (isForecast) {
+    for (const st of STATE_ABBREVS) {
+      const v = getVal(st, yr, metric);
+      if (v !== undefined && v !== null) yearData[st] = { [metric]: v };
+    }
+  } else {
+    Object.assign(yearData, dataByYear[yr] || {});
+  }
+
+  const vals = Object.values(yearData).map(d=>d[metric]).filter(v=>v!==undefined&&!isNaN(v)&&v>0);
+
+  
+  const color = d3.scaleQuantile().domain(vals)
+    .range(d3.range(7).map(i => {
+      
+      const base = isForecast ? d3.interpolateYlOrRd : d3.interpolateBlues;
+      return base(0.15+i/6*0.85);
+    }));
+
+  statesLayer.selectAll("path").transition().duration(200)
+    .attr("fill", d=>{
+      const v = yearData[d.properties.abbrev]?.[metric];
+      return v===undefined ? "#1e2233" : color(v);
+    })
+    .attr("opacity", isForecast ? 0.82 : 1);
+
+  drawLegendQuantile(color, vals, metric);
+  if (clusterChk.checked) {
+    currentClusterResult = clusterStates(yearData, metric);
+    applyClusterBorders(currentClusterResult);
+  }
+}
+
+const natSvg=d3.select("#national_svg");
+const natM={top:8,right:16,bottom:24,left:56};
+const natW=668-natM.left-natM.right, natH=180-natM.top-natM.bottom;
+const natG=natSvg.append("g").attr("transform",`translate(${natM.left},${natM.top})`);
+const natX=d3.scaleLinear().domain([HIST_MIN, FORE_MAX]).range([0, natW]);
+const natY=d3.scaleLinear().range([natH,0]);
+
+natG.append("g").attr("transform",`translate(0,${natH})`)
+  .call(d3.axisBottom(natX).ticks(7).tickFormat(d3.format("d")).tickSize(2))
+  .selectAll("text").style("fill","#64748b");
+natG.select(".domain").attr("stroke","#e2e8f0");
+
+const natYAxisG=natG.append("g");
+const natLineFn=d3.line()
+  .defined(d=>d.value!==null&&!isNaN(d.value))
+  .x(d=>natX(d.year)).y(d=>natY(d.value)).curve(d3.curveMonotoneX);
+const natAreaFn=d3.area()
+  .defined(d=>d.value!==null&&!isNaN(d.value))
+  .x(d=>natX(d.year)).y0(natH).y1(d=>natY(d.value)).curve(d3.curveMonotoneX);
+
+const natAreaPath=natG.append("path").attr("fill","#3b82f6").attr("opacity",0.08);
+const natPath=natG.append("path").attr("fill","none").attr("stroke","#3b82f6").attr("stroke-width",2);
+const natForecastPath=natG.append("path").attr("fill","none")
+  .attr("stroke","#f59e0b").attr("stroke-width",1.8).attr("stroke-dasharray","6,3").attr("opacity",0.9);
+const natForecastArea=natG.append("path").attr("fill","#f59e0b").attr("opacity",0.06);
+const natDots=natG.append("g");
+const natForecastDots=natG.append("g");
+
+natG.append("line")
+  .attr("x1", natX(HIST_MAX+0.5)).attr("x2", natX(HIST_MAX+0.5))
+  .attr("y1", 0).attr("y2", natH)
+  .attr("stroke","#f59e0b").attr("stroke-width",0.8).attr("stroke-dasharray","3,3").attr("opacity",0.5);
+natG.append("text")
+  .attr("x", natX(HIST_MAX+0.7)).attr("y", 6)
+  .style("font-size","11px").style("font-weight","600").style("fill","#f59e0b").text("Forecast ▶");
+
+const natCursor=natG.append("line").attr("stroke","#e05000").attr("stroke-width",1.2)
+  .attr("stroke-dasharray","4,3").attr("y1",0).attr("y2",natH);
+const natCursorLbl=natG.append("text").attr("fill","#e05000").attr("font-size","9px").attr("text-anchor","middle");
+
+function updateNationalChart(metric) {
+  const labelObj=metricOptions.find(o=>o.value===metric);
+  document.getElementById("national_title").textContent=
+    `National — ${labelObj?labelObj.label:metric}`;
+  const isRaw=labelObj?labelObj.raw:true;
+
+  
+  const histSeries=[];
+  for (let yr=HIST_MIN;yr<=HIST_MAX;yr++) {
+    const yd=dataByYear[yr]||{};
+    let total=0,count=0;
+    for (const st in yd){const v=yd[st][metric];if(v!==undefined&&!isNaN(v)){total+=v;count++;}}
+    histSeries.push({year:yr,value:isRaw?total:(count?total/count:0)});
+  }
+  nationalByYear={};
+  histSeries.forEach(d=>{nationalByYear[d.year]=d.value;});
+
+  
+  if (!nationalForecastCache[metric]) buildNationalForecap(metric, isRaw);
+  const foreSeries=[];
+  
+  const bridge = histSeries[histSeries.length-1];
+  foreSeries.push(bridge);
+  for (let yr=HIST_MAX+1; yr<=FORE_MAX; yr++) {
+    let v = nationalForecastCache[metric]?.[yr];
+    if (v === undefined) v = null;
+    foreSeries.push({year:yr, value:v});
+    nationalByYear[yr] = v;
+  }
+
+  const allVals=[...histSeries,...foreSeries].map(d=>d.value).filter(v=>v!==null&&!isNaN(v));
+  const yMax=(d3.max(allVals)||1)*1.12;
+  const yMin=Math.min(0,d3.min(allVals));
+  natY.domain([yMin,yMax]);
+
+  natYAxisG.transition().duration(300)
+    .call(d3.axisLeft(natY).ticks(3).tickFormat(fmtFor(metric)).tickSize(2));
+  natYAxisG.selectAll("text").style("fill","#64748b");
+  natYAxisG.select(".domain").attr("stroke","#e2e8f0");
+
+  natPath.datum(histSeries).transition().duration(300).attr("d",natLineFn);
+  natAreaPath.datum(histSeries).transition().duration(300).attr("d",natAreaFn);
+  natForecastPath.datum(foreSeries).transition().duration(300).attr("d",natLineFn);
+  natForecastArea.datum(foreSeries).transition().duration(300).attr("d",natAreaFn);
+
+  const dots=natDots.selectAll("circle").data(histSeries);
+  dots.enter().append("circle").attr("r",2.5).attr("fill","#3b82f6")
+    .attr("stroke","#ffffff").attr("stroke-width",1)
+    .merge(dots).transition().duration(300).attr("cx",d=>natX(d.year)).attr("cy",d=>natY(d.value));
+  dots.exit().remove();
+
+  const fdots=natForecastDots.selectAll("circle").data(foreSeries.filter(d=>d.year>HIST_MAX));
+  fdots.enter().append("circle").attr("r",2.5).attr("fill","#f59e0b")
+    .attr("stroke","#ffffff").attr("stroke-width",1)
+    .merge(fdots).transition().duration(300).attr("cx",d=>natX(d.year)).attr("cy",d=>natY(d.value));
+  fdots.exit().remove();
+
+  updateNationalCursor(+slider.value);
+}
+
+function buildNationalForecap(metric, isRaw) {
+  buildNationalForecast(metric, isRaw);
+}
+
+function updateNationalCursor(yr) {
+  const x=natX(yr);
+  natCursor.attr("x1",x).attr("x2",x);
+  const val=nationalByYear[yr];
+  natCursorLbl.attr("x",x).attr("y",-2).text(val!==undefined&&val!==null?fmtFor(metricPicker.value,"tooltip")(val):"");
+}
+
+const globalSelectedStates = [{ key: "NY", colorIdx: 0 }];
+const STATE_LINE_COLORS = ["#3b82f6","#10b981","#ef4444","#a78bfa"]; 
+const NATIONAL_COLOR = "#f59e0b"; 
+
+const panelMetrics = [
+  "capacity",
+  "net_elec_gen_oil_pct",
+  "net_elec_gen_wind_pct",
+];
+
+let ddEl = null;
+
+function getNationalSeries(metricKey) {
+  const labelObj = metricOptions.find(o=>o.value===metricKey);
+  const isRaw = labelObj ? labelObj.raw : true;
+  const series = [];
+  for (let yr=HIST_MIN; yr<=HIST_MAX; yr++) {
+    const yd=dataByYear[yr]||{};
+    let total=0, count=0;
+    for (const st in yd){ const v=yd[st][metricKey]; if(v!==undefined&&!isNaN(v)){total+=v;count++;} }
+    series.push({year:yr, value: isRaw ? total : (count?total/count:0), forecast:false});
+  }
+  if (!nationalForecastCache[metricKey]) buildNationalForecap(metricKey, isRaw);
+  for (let yr=HIST_MAX+1; yr<=FORE_MAX; yr++) {
+    const v = nationalForecastCache[metricKey]?.[yr] ?? null;
+    series.push({year:yr, value:v, forecast:true});
+  }
+  return series;
+}
+
+function getStateSeries(stAbbrev, metricKey) {
+  return d3.range(HIST_MIN, FORE_MAX+1).map(yr=>({
+    year: yr,
+    value: getVal(stAbbrev, yr, metricKey) ?? null,
+    forecast: yr > HIST_MAX
+  }));
+}
+
+function rebuildGlobalPills() {
+  const wrap = document.getElementById("global-pills");
+  if (!wrap) return;
+  wrap.innerHTML = "";
+  globalSelectedStates.forEach((sel, si) => {
+    const pill = document.createElement("div");
+    pill.className = "state-pill";
+    const col = sel.colorIdx === -1 ? NATIONAL_COLOR : STATE_LINE_COLORS[sel.colorIdx];
+    pill.style.background = col + "22";
+    pill.style.borderColor = col;
+    pill.style.color = col;
+    const lbl = document.createElement("span");
+    lbl.textContent = sel.key === "national" ? "National Avg" : sel.key;
+    pill.appendChild(lbl);
+    const x = document.createElement("span");
+    x.className = "pill-x";
+    x.textContent = "✕";
+    x.addEventListener("click", () => {
+      globalSelectedStates.splice(si, 1);
+      rebuildGlobalPills();
+      renderAllCharts();
+    });
+    pill.appendChild(x);
+    wrap.appendChild(pill);
+  });
+
+  const addBtn = document.getElementById("global-add-btn");
+  if (addBtn) addBtn.style.display = "";
+}
+
+function openGlobalDropdown(anchor) {
+  closeDropdown();
+  const usedKeys = new Set(globalSelectedStates.map(s => s.key));
+
+  ddEl = document.createElement("div");
+  ddEl.className = "state-dropdown";
+
+  const search = document.createElement("input");
+  search.type = "text";
+  search.placeholder = "Search state...";
+  ddEl.appendChild(search);
+
+  const bulkRow = document.createElement("div");
+  bulkRow.className = "bulk-row";
+  const selAll = document.createElement("span");
+  selAll.textContent = "Select all";
+  selAll.className = "bulk-link";
+  const unselAll = document.createElement("span");
+  unselAll.textContent = "Unselect all";
+  unselAll.className = "bulk-link";
+  selAll.addEventListener("click", () => {
+    STATE_ABBREVS.forEach(st => {
+      if (usedKeys.has(st)) return;
+      const usedIdxs = new Set(globalSelectedStates.filter(s=>s.colorIdx>=0).map(s=>s.colorIdx));
+      let ci = -1;
+      for (let i = 0; i < STATE_LINE_COLORS.length; i++) { if (!usedIdxs.has(i)) { ci = i; break; } }
+      if (ci === -1) ci = globalSelectedStates.filter(s=>s.colorIdx>=0).length % STATE_LINE_COLORS.length;
+      globalSelectedStates.push({ key: st, colorIdx: ci });
+      usedKeys.add(st);
+    });
+    rebuildGlobalPills();
+    renderAllCharts();
+    buildOpts(search.value);
+  });
+  unselAll.addEventListener("click", () => {
+    for (let i = globalSelectedStates.length - 1; i >= 0; i--) {
+      if (globalSelectedStates[i].key !== "national") {
+        usedKeys.delete(globalSelectedStates[i].key);
+        globalSelectedStates.splice(i, 1);
+      }
+    }
+    rebuildGlobalPills();
+    renderAllCharts();
+    buildOpts(search.value);
+  });
+  bulkRow.appendChild(selAll);
+  bulkRow.appendChild(unselAll);
+  ddEl.appendChild(bulkRow);
+
+  function buildOpts(filter = "") {
+    ddEl.querySelectorAll(".state-opt").forEach(e => e.remove());
+
+    
+    const natKey = "national";
+    const natLabel = "National Avg";
+    if (!filter || natLabel.toLowerCase().includes(filter.toLowerCase())) {
+      const isSelected = usedKeys.has(natKey);
+      const natOpt = document.createElement("div");
+      natOpt.className = "state-opt" + (isSelected ? " selected" : "");
+      natOpt.style.borderBottom = "1px solid var(--border)";
+      natOpt.style.marginBottom = "3px";
+      natOpt.style.paddingBottom = "5px";
+
+      const natDot = document.createElement("span");
+      natDot.className = "dot";
+      natDot.style.background = isSelected ? NATIONAL_COLOR : "transparent";
+      natDot.style.border = isSelected ? "none" : "1px solid #64748b";
+      natOpt.appendChild(natDot);
+
+      const natTxt = document.createElement("span");
+      natTxt.textContent = natLabel;
+      natTxt.style.fontWeight = "600";
+      natOpt.appendChild(natTxt);
+
+      natOpt.addEventListener("click", () => {
+        if (usedKeys.has(natKey)) {
+          const idx = globalSelectedStates.findIndex(s => s.key === natKey);
+          if (idx >= 0) globalSelectedStates.splice(idx, 1);
+          usedKeys.delete(natKey);
+          natOpt.classList.remove("selected");
+          natDot.style.background = "transparent";
+          natDot.style.border = "1px solid #64748b";
+        } else {
+          globalSelectedStates.push({ key: natKey, colorIdx: -1 });
+          usedKeys.add(natKey);
+          natOpt.classList.add("selected");
+          natDot.style.background = NATIONAL_COLOR;
+          natDot.style.border = "none";
+        }
+        rebuildGlobalPills();
+        renderAllCharts();
+      });
+      ddEl.appendChild(natOpt);
+    }
+
+    STATE_ABBREVS.forEach(st => {
+      if (filter && !st.toLowerCase().includes(filter.toLowerCase())) return;
+      const isSelected = usedKeys.has(st);
+      const opt = document.createElement("div");
+      opt.className = "state-opt" + (isSelected ? " selected" : "");
+
+      const dot = document.createElement("span");
+      dot.className = "dot";
+      const existingSel = globalSelectedStates.find(s => s.key === st);
+      dot.style.background = existingSel ? STATE_LINE_COLORS[existingSel.colorIdx] : "transparent";
+      dot.style.border = existingSel ? "none" : "1px solid #64748b";
+      opt.appendChild(dot);
+
+      const txt = document.createElement("span");
+      txt.textContent = st;
+      opt.appendChild(txt);
+
+      opt.addEventListener("click", () => {
+        if (usedKeys.has(st)) {
+          
+          const idx = globalSelectedStates.findIndex(s => s.key === st);
+          if (idx >= 0) globalSelectedStates.splice(idx, 1);
+          usedKeys.delete(st);
+          opt.classList.remove("selected");
+          dot.style.background = "transparent";
+          dot.style.border = "1px solid #64748b";
+        } else {
+          const usedIdxs = new Set(globalSelectedStates.filter(s=>s.colorIdx>=0).map(s => s.colorIdx));
+          let ci = -1;
+          for (let i = 0; i < STATE_LINE_COLORS.length; i++) { if (!usedIdxs.has(i)) { ci = i; break; } }
+          if (ci === -1) ci = globalSelectedStates.filter(s=>s.colorIdx>=0).length % STATE_LINE_COLORS.length;
+          globalSelectedStates.push({ key: st, colorIdx: ci });
+          usedKeys.add(st);
+          opt.classList.add("selected");
+          dot.style.background = STATE_LINE_COLORS[ci];
+          dot.style.border = "none";
+        }
+        rebuildGlobalPills();
+        renderAllCharts();
+      });
+
+      ddEl.appendChild(opt);
+    });
+  }
+
+  search.addEventListener("input", () => buildOpts(search.value));
+  buildOpts();
+
+  const rect = anchor.getBoundingClientRect();
+  ddEl.style.position = "fixed";
+  ddEl.style.top = (rect.bottom + 2) + "px";
+  ddEl.style.left = rect.left + "px";
+  document.body.appendChild(ddEl);
+  search.focus();
+}
+
+function closeDropdown() {
+  if (ddEl) { ddEl.remove(); ddEl = null; }
+}
+
+document.addEventListener("click", (e) => {
+  const addBtn = document.getElementById("global-add-btn");
+  if (ddEl && !ddEl.contains(e.target) && e.target !== addBtn) closeDropdown();
+});
+
+function buildPanel(panelIdx) {
+  const container = document.getElementById(`chart-panel-${panelIdx}`);
+  container.innerHTML = "";
+
+  const header = document.createElement("div");
+  header.className = "chart-header";
+
+  const lbl = document.createElement("span");
+  lbl.className = "chart-label";
+  lbl.textContent = `Chart ${panelIdx + 1}`;
+  header.appendChild(lbl);
+
+  const mSel = document.createElement("select");
+  metricOptions.forEach(o => {
+    const opt = document.createElement("option");
+    if (o.divider) {
+      opt.textContent = "──────────────";
+      opt.disabled = true;
+    } else {
+      opt.value = o.value; opt.textContent = o.label;
+      if (o.value === panelMetrics[panelIdx]) opt.selected = true;
+    }
+    mSel.appendChild(opt);
+  });
+  mSel.addEventListener("change", () => {
+    panelMetrics[panelIdx] = mSel.value;
+    renderChartLines(panelIdx);
+  });
+  header.appendChild(mSel);
+
+  container.appendChild(header);
+
+  const body = document.createElement("div");
+  body.className = "chart-body";
+  body.id = `chart-body-${panelIdx}`;
+  container.appendChild(body);
+
+  renderChartLines(panelIdx);
+}
+
+function renderChartLines(panelIdx) {
+  const metricKey = panelMetrics[panelIdx];
+  const body = document.getElementById(`chart-body-${panelIdx}`);
+  if (!body) return;
+
+  const W = body.clientWidth || 400;
+  const H = body.clientHeight || 120;
+  const M = {top:8, right:16, bottom:22, left:54};
+  const iW = W - M.left - M.right;
+  const iH = H - M.top - M.bottom;
+
+  body.innerHTML = "";
+  const svg = d3.select(body).append("svg").attr("width",W).attr("height",H);
+
+  if (!Object.keys(dataByYear).length) return;
+
+  const x = d3.scaleLinear().domain([HIST_MIN, FORE_MAX]).range([0,iW]);
+  const y = d3.scaleLinear().range([iH,0]);
+
+  
+  const allSeries = globalSelectedStates.map(sel => ({
+    key: sel.key,
+    color: sel.colorIdx === -1 ? NATIONAL_COLOR : STATE_LINE_COLORS[sel.colorIdx],
+    isDash: sel.key === "national",
+    data: sel.key === "national" ? getNationalSeries(metricKey) : getStateSeries(sel.key, metricKey)
+  }));
+
+  const allVals = allSeries.flatMap(s=>s.data.map(d=>d.value)).filter(v=>v!==null&&!isNaN(v));
+  if (!allVals.length) {
+    svg.append("text").attr("x",W/2).attr("y",H/2).attr("text-anchor","middle")
+      .style("fill","#94a3b8").style("font-size","11px").text("Add a state above to display data");
+    return;
+  }
+  const yMin = Math.min(0, d3.min(allVals));
+  const yMax = d3.max(allVals) * 1.1;
+  y.domain([yMin, yMax]);
+
+  const g = svg.append("g").attr("transform",`translate(${M.left},${M.top})`);
+
+  
+  const foreX = x(HIST_MAX + 0.5);
+  g.append("rect")
+    .attr("x", foreX).attr("y", 0)
+    .attr("width", iW - foreX).attr("height", iH)
+    .attr("fill","rgba(251,191,36,0.06)");
+  g.append("line")
+    .attr("x1",foreX).attr("x2",foreX).attr("y1",0).attr("y2",iH)
+    .attr("stroke","#f59e0b").attr("stroke-width",0.8).attr("stroke-dasharray","4,3").attr("opacity",0.6);
+  g.append("text")
+    .attr("x",foreX+4).attr("y",8)
+    .style("font-size","11px").style("fill","#f59e0b").style("font-weight","600").text("Forecast");
+
+  
+  g.append("g").attr("class","grid")
+    .call(d3.axisLeft(y).ticks(5).tickSize(-iW).tickFormat(""))
+    .selectAll("line").attr("stroke","#e2e8f0").attr("stroke-width",0.5);
+  g.select(".grid .domain").remove();
+
+  g.append("g").attr("transform",`translate(0,${iH})`)
+    .call(d3.axisBottom(x).ticks(7).tickFormat(d3.format("d")).tickSize(2))
+    .selectAll("text").style("fill","#64748b");
+  g.selectAll(".domain").attr("stroke","#e2e8f0");
+
+  g.append("g")
+    .call(d3.axisLeft(y).ticks(5).tickFormat(fmtFor(metricKey)).tickSize(2))
+    .selectAll("text").style("fill","#64748b");
+
+  const histLineFn = d3.line()
+    .defined(d=>!d.forecast&&d.value!==null&&!isNaN(d.value))
+    .x(d=>x(d.year)).y(d=>y(d.value)).curve(d3.curveMonotoneX);
+
+  const foreLineFn = d3.line()
+    .defined(d=>d.forecast&&d.value!==null&&!isNaN(d.value))
+    .x(d=>x(d.year)).y(d=>y(d.value)).curve(d3.curveMonotoneX);
+
+  
+  const yr = +slider.value;
+  g.append("line")
+    .attr("x1",x(yr)).attr("x2",x(yr)).attr("y1",0).attr("y2",iH)
+    .attr("stroke","#e05000").attr("stroke-width",1.2).attr("stroke-dasharray","4,3");
+
+  allSeries.forEach(({key, color, isDash, data})=>{
+    const col = color;
+
+    const lastHist = data.filter(d=>!d.forecast&&d.value!==null).at(-1);
+    const firstFore = data.find(d=>d.forecast&&d.value!==null);
+
+    
+    g.append("path")
+      .datum(data.filter(d=>!d.forecast))
+      .attr("fill","none").attr("stroke",col)
+      .attr("stroke-width", isDash ? 1.5 : 2)
+      .attr("stroke-dasharray", isDash ? "6,3" : null)
+      .attr("opacity",0.9)
+      .attr("d",histLineFn);
+
+    
+    if (lastHist && firstFore) {
+      g.append("line")
+        .attr("x1",x(lastHist.year)).attr("y1",y(lastHist.value))
+        .attr("x2",x(firstFore.year)).attr("y2",y(firstFore.value))
+        .attr("stroke",col).attr("stroke-width",1.2).attr("stroke-dasharray","4,3").attr("opacity",0.7);
+    }
+
+    
+    g.append("path")
+      .datum(data.filter(d=>d.forecast))
+      .attr("fill","none").attr("stroke",col)
+      .attr("stroke-width", 1.5)
+      .attr("stroke-dasharray","6,3")
+      .attr("opacity",0.8)
+      .attr("d",foreLineFn);
+
+    
+    const dotsG = g.append("g");
+    dotsG.selectAll("circle")
+      .data(data.filter(d=>d.value!==null&&!isNaN(d.value)))
+      .enter().append("circle")
+        .attr("cx",d=>x(d.year)).attr("cy",d=>y(d.value))
+        .attr("r", d => d.forecast ? 2 : 2.5)
+        .attr("fill", d => d.forecast ? "#ffffff" : col)
+        .attr("stroke", d => d.forecast ? col : "#ffffff")
+        .attr("stroke-width", d => d.forecast ? 1.5 : 1)
+        .attr("opacity", d => d.forecast ? 0.8 : 1)
+        .style("cursor","pointer")
+        .on("mouseover",(event,d)=>{
+          const metLabel = metricOptions.find(o=>o.value===metricKey)?.label||metricKey;
+          const foreNote = d.forecast ? '<br><span class="forecast-note">⚡ Forecasted value (poly regression)</span>' : '';
+          tooltip.innerHTML=`<b>${key==="national"?"National Avg":key}</b>
+          ${d.year}<br>${metLabel}: ${fmtFor(metricKey,"tooltip")(d.value)}${foreNote}`;
+          tooltip.style.display="block";
+          positionTooltip(event.pageX, event.pageY);
+        })
+        .on("mouseout",()=>tooltip.style.display="none");
+  });
+}
+
+function renderAllCharts() { [0,1,2].forEach(i=>renderChartLines(i)); }
+
+function buildMapTooltipHTML(st, metric, yr) {
+  const v = getVal(st, metric, yr); 
+  const vv = getVal(st, yr, metric);
+  if (vv===undefined||vv===null) return null;
+  const ci=currentClusterResult?.stateCluster?.[st];
+  const ctag=(clusterChk.checked&&ci!==undefined)
+    ? ` &nbsp;<span style="color:${CLUSTER_COLORS[ci]}">● Cluster ${ci+1}</span>` : "";
+  const foreNote = yr>HIST_MAX ? ' <span style="color:#f59e0b;font-size:10px">⚡ forecast</span>' : '';
+  const metLabel = metricOptions.find(o=>o.value===metric)?.label || metric;
+  return `<b>${st}</b>${ctag}${foreNote}<br>${metLabel}:
+    ${fmtFor(metric,"tooltip")(vv)}`;
+}
+
+function updateYearUI(yr) {
+  const isForecast = yr > HIST_MAX;
+  const metLabel = metricOptions.find(o=>o.value===metricPicker.value)?.label || metricPicker.value;
+  yearLabel.textContent = `${metLabel} — ${yr}`;
+  yearLabel.className = isForecast ? "forecast-year" : "historical-year";
+  forecastLabel.className = isForecast ? "visible" : "";
+}
+
+function redraw() {
+  const yr=+slider.value, metric=metricPicker.value;
+  updateYearUI(yr);
+  drawStates(yr,metric);
+  updateNationalCursor(yr);
+  renderAllCharts();
+  if (currentHoveredState && currentHoveredPos) {
+    const html=buildMapTooltipHTML(currentHoveredState,metric,yr);
+    if (html) { tooltip.innerHTML=html; tooltip.style.display="block"; }
+  }
+}
+
+clusterChk.addEventListener("change",()=>{
+  if (clusterChk.checked) {
+    const yr=+slider.value, metric=metricPicker.value;
+    const yearData = yr > HIST_MAX
+      ? Object.fromEntries(STATE_ABBREVS.filter(st=>forecastCache[st]?.[metric]?.[yr]!==undefined).map(st=>[st,{[metric]:forecastCache[st][metric][yr]}]))
+      : (dataByYear[yr]||{});
+    currentClusterResult=clusterStates(yearData,metric);
+    applyClusterBorders(currentClusterResult);
+  } else {
+    currentClusterResult=null;
+    removeClusterBorders();
+  }
+});
+
+Promise.all([
+  d3.json("https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json"),
+  d3.csv("data.csv")
+]).then(([us,rows])=>{
+  rows.forEach(r=>{
+    if (r.status !== "operable") return;
+    const st=r.plant_state, yr=+r.year;
+    if (!stateYear[st]) stateYear[st]={};
+    if (!stateYear[st][yr]) stateYear[st][yr]=initMetrics();
+    const m=stateYear[st][yr];
+    for (const k in m) m[k]+=+r[k]||0;
+  });
+
+  computeDerivedMetrics();
+
+  for (let yr=HIST_MIN;yr<=HIST_MAX;yr++) {
+    dataByYear[yr]={};
+    for (const st in stateYear) if (stateYear[st][yr]) dataByYear[yr][st]=stateYear[st][yr];
+  }
+
+  
+  const allMetricKeys = metricOptions.map(o=>o.value);
+  buildForecasts(stateYear, allMetricKeys);
+
+  geoFeatures=topojson.feature(us,us.objects.states).features;
+  geoFeatures.forEach(f=>{
+    const fips=String(f.id).padStart(2,"0");
+    f.properties.abbrev=fipsToState[fips]||"";
+  });
+
+  statesLayer.selectAll("path").data(geoFeatures).enter().append("path")
+    .attr("d",pathGen)
+    .attr("stroke","#e2e8f0").attr("stroke-width",0.5)
+    .on("mousemove",(event,d)=>{
+      const yr=+slider.value,metric=metricPicker.value,st=d.properties.abbrev;
+      const html=buildMapTooltipHTML(st,metric,yr);
+      if (!html) return;
+      currentHoveredState=st;
+      currentHoveredPos={x:event.pageX, y:event.pageY};
+      tooltip.style.display="block";
+      tooltip.innerHTML=html;
+      positionTooltip(event.pageX, event.pageY);
+    })
+    .on("mouseout",()=>{ currentHoveredState=null; currentHoveredPos=null; tooltip.style.display="none"; });
+
+  populateMetricOptions();
+  [0,1,2].forEach(i=>buildPanel(i));
+
+  
+  const globalAddBtn = document.getElementById("global-add-btn");
+  if (globalAddBtn) {
+    globalAddBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (ddEl) { closeDropdown(); return; }
+      openGlobalDropdown(globalAddBtn);
+    });
+  }
+  rebuildGlobalPills();
+
+  redraw();
+  updateNationalChart(metricPicker.value);
+});
+
+slider.addEventListener("input",()=>{ redraw(); });
+
+metricPicker.addEventListener("change",()=>{
+  redraw();
+  updateNationalChart(metricPicker.value);
+});
+
+window.addEventListener("resize", renderAllCharts);
+
+let isPlaying=false, playTimer=null;
+document.getElementById("play_btn").addEventListener("click",function(){
+  isPlaying=!isPlaying; this.textContent=isPlaying?"⏸":"▶";
+  if (isPlaying) {
+    playTimer=setInterval(()=>{
+      const atEnd=+slider.value>=+slider.max;
+      slider.value=atEnd?slider.min:+slider.value+1;
+      redraw();
+    },500);
+  } else { clearInterval(playTimer); }
+});
+</script>
+</body>
+</html>
